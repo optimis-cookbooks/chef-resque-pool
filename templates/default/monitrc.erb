@@ -1,0 +1,5 @@
+check process <%= @app_name %>_resque
+  with pidfile <%= @pidfile %>
+  start program = "/etc/init.d/<%= @app_name %>_resque start" with timeout 90 seconds
+  stop program  = "/etc/init.d/<%= @app_name %>_resque stop"  with timeout 90 seconds
+  group resque

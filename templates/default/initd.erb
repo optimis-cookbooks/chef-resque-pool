@@ -1,0 +1,66 @@
+#!/bin/sh -e
+
+### BEGIN INIT INFO
+# Provides:          resque-pool-<%= @app_name %>
+# Required-Start:    $local_fs $remote_fs $network
+# Required-Stop:     $local_fs $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: resque-pool init script for <%= @app_name %>
+# Description:       resque-pool manages the resque workers
+### END INIT INFO
+
+app_name="<%= @app_name %>"
+pidfile="<%= @pidfile %>"
+app_dir="/var/www/${app_name}"
+run_as_user="deploy"
+sleep_time_during_restart=10
+stop_schedule="QUIT/30/INT/10/KILL/5"
+bundler="/usr/local/bin/bundle"
+environment="<%= @rails_env %>"
+stdout_log="${app_dir}/log/resque-pool-${app_name}.stdout.log"
+stderr_log="${app_dir}/log/resque-pool-${app_name}.stderr.log"
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+
+# Override node specific variables in these files.
+if [ -f /etc/default/resque ] ; then
+  . /etc/default/resque
+fi
+
+if [ -f /etc/default/${app_name}_resque ] ; then
+  . /etc/default/${app_name}_resque
+fi
+
+case "$1" in
+  start)
+    su - devel -c "cd ${app_dir} && bundle exec resque-pool -d -a ${app_name} -p ${pidfile} -E ${environment} -o ${stdout_log} -e ${stderr_log}"
+    ;;
+  reload)
+    su - devel -c "kill -HUP `cat ${pidfile}`"
+    su - devel -c "rm -f ${pidfile}"
+    ;;
+  graceful-stop)
+    su - devel -c "kill -QUIT `cat ${pidfile}`"
+    su - devel -c "rm -f ${pidfile}"
+    ;;
+  quick-stop)
+    su - devel -c "kill -INT `cat ${pidfile}`"
+    su - devel -c "rm -f ${pidfile}"
+    ;;
+  stop)
+    su - devel -c "kill -QUIT `cat ${pidfile}`"
+    su - devel -c "rm -f ${pidfile}"
+    ;;
+  restart)
+    $0 stop
+    sleep ${sleep_time_during_restart}
+    $0 start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|graceful-stop|quick-stop|restart|reload}"
+    exit 1
+    ;;
+esac
+
+# vim:ft=sh
